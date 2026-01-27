@@ -31,6 +31,8 @@ from .augment import (
 )
 from .base import BaseDataset
 from .converter import merge_multi_segment
+from .label_alias import LabelAliasManager, create_alias_manager_from_data
+from .per_class_augment import PerClassAugmentation, PerClassAugmentationTransform, create_per_class_augmentation
 from .utils import (
     HELP_URL,
     check_file_speeds,
@@ -57,6 +59,8 @@ class YOLODataset(BaseDataset):
         use_keypoints (bool): Indicates if keypoints should be used for pose estimation.
         use_obb (bool): Indicates if oriented bounding boxes should be used.
         data (dict): Dataset configuration dictionary.
+        label_alias_manager (LabelAliasManager | None): Manager for label aliasing functionality.
+        per_class_augment (PerClassAugmentation | None): Handler for per-class augmentation.
 
     Methods:
         cache_labels: Cache dataset labels, check images and read shapes.
@@ -85,7 +89,20 @@ class YOLODataset(BaseDataset):
         self.use_obb = task == "obb"
         self.data = data
         assert not (self.use_segments and self.use_keypoints), "Can not use both segments and keypoints."
+
+        # Initialize label aliasing
+        self.label_alias_manager = create_alias_manager_from_data(data) if data else None
+
+        # Initialize per-class augmentation
+        class_names = data.get("names", {}) if data else {}
+        self.per_class_augment = create_per_class_augmentation(data, class_names) if data else None
+
         super().__init__(*args, channels=self.data.get("channels", 3), **kwargs)
+
+        # Apply label aliasing to loaded labels
+        if self.label_alias_manager is not None:
+            self.labels = self.label_alias_manager.update_labels(self.labels)
+            LOGGER.info(f"Applied label aliasing: {self.label_alias_manager}")
 
     def cache_labels(self, path: Path = Path("./labels.cache")) -> dict:
         """Cache dataset labels, check images and read shapes.
@@ -217,6 +234,17 @@ class YOLODataset(BaseDataset):
             hyp.mixup = hyp.mixup if self.augment and not self.rect else 0.0
             hyp.cutmix = hyp.cutmix if self.augment and not self.rect else 0.0
             transforms = v8_transforms(self, self.imgsz, hyp)
+
+            # Add per-class augmentation if configured
+            if self.per_class_augment is not None:
+                class_names = self.data.get("names", {}) if self.data else {}
+                per_class_transform = PerClassAugmentationTransform(
+                    config=self.data if self.data else {},
+                    class_names=class_names,
+                    p=1.0,
+                )
+                # Insert per-class augmentation before Format
+                transforms.insert(-1 if isinstance(transforms, Compose) else 0, per_class_transform)
         else:
             transforms = Compose([LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
         transforms.append(
