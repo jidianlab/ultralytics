@@ -243,8 +243,12 @@ class YOLODataset(BaseDataset):
                     class_names=class_names,
                     p=1.0,
                 )
-                # Insert per-class augmentation before Format
-                transforms.insert(-1 if isinstance(transforms, Compose) else 0, per_class_transform)
+                # Insert per-class augmentation before the last element (Format)
+                # transforms from v8_transforms is always a Compose object
+                if hasattr(transforms, "transforms") and len(transforms.transforms) > 0:
+                    transforms.insert(len(transforms.transforms), per_class_transform)
+                else:
+                    transforms.append(per_class_transform)
         else:
             transforms = Compose([LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
         transforms.append(

@@ -185,12 +185,22 @@ class LabelAliasManager:
         if not self.original_to_target_id:
             return labels
 
+        # Create mapping array for efficient indexing
+        max_orig_id = max(self.original_to_target_id.keys()) + 1
+        mapping_array = np.arange(max_orig_id)
+        for orig_id, target_id in self.original_to_target_id.items():
+            if orig_id < max_orig_id:
+                mapping_array[orig_id] = target_id
+
         for label in labels:
             if "cls" in label and len(label["cls"]) > 0:
-                # Map each class ID
-                cls_array = label["cls"]
-                mapped_cls = np.vectorize(self.map_label_id)(cls_array.astype(int))
-                label["cls"] = mapped_cls.astype(cls_array.dtype)
+                # Map each class ID using array indexing
+                cls_array = label["cls"].astype(int).flatten()
+                # Handle IDs outside the mapping range
+                valid_mask = cls_array < max_orig_id
+                mapped_cls = cls_array.copy()
+                mapped_cls[valid_mask] = mapping_array[cls_array[valid_mask]]
+                label["cls"] = mapped_cls.reshape(label["cls"].shape).astype(label["cls"].dtype)
 
         return labels
 

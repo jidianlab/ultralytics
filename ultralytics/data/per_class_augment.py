@@ -314,8 +314,8 @@ class PerClassAugmentation:
             for other in other_bboxes:
                 ox1, oy1, ox2, oy2 = other
 
-                # Skip if it's the same bbox
-                if np.allclose([x1, y1, x2, y2], other):
+                # Skip if it's the same bbox (use simple equality check for pixel coords)
+                if x1 == ox1 and y1 == oy1 and x2 == ox2 and y2 == oy2:
                     continue
 
                 # Check for overlap and constrain expansion
@@ -546,12 +546,13 @@ class PerClassAugmentation:
 
         img = img.copy()
 
-        # Generate noise
-        noise = np.random.normal(0, config.noise, img.shape).astype(np.float32)
-        noisy_img = np.clip(img.astype(np.float32) + noise, 0, 255).astype(np.uint8)
+        # Generate noise only for the masked region (more efficient)
+        region_pixels = img[mask]
+        noise = np.random.normal(0, config.noise, region_pixels.shape).astype(np.float32)
+        noisy_region = np.clip(region_pixels.astype(np.float32) + noise, 0, 255).astype(np.uint8)
 
         # Apply to region
-        img[mask] = noisy_img[mask]
+        img[mask] = noisy_region
 
         return img
 
@@ -645,7 +646,7 @@ class PerClassAugmentationTransform:
         """Apply per-class augmentation to labels.
 
         Args:
-            labels (dict[str, Any]): Labels dictionary with 'img', 'instances'.
+            labels (dict[str, Any]): Labels dictionary with 'img', 'instances', and optionally 'cls'.
 
         Returns:
             (dict[str, Any]): Augmented labels.
@@ -661,16 +662,25 @@ class PerClassAugmentationTransform:
         if instances is None or len(instances) == 0:
             return labels
 
-        # Get bboxes and classes
+        # Get bboxes from instances
         bboxes = instances.bboxes  # Should be in xyxy format
-        classes = instances.cls
 
-        if len(bboxes) == 0:
+        # Get classes - check both labels dict and instances
+        classes = labels.get("cls")
+        if classes is None:
+            # Classes might be stored differently, skip augmentation if not found
+            return labels
+
+        # Flatten classes if needed
+        if len(classes.shape) > 1:
+            classes = classes.flatten()
+
+        if len(bboxes) == 0 or len(classes) == 0:
             return labels
 
         # Convert normalized bboxes to pixel coordinates if needed
         h, w = img.shape[:2]
-        if bboxes.max() <= 1.0:  # Normalized
+        if instances.normalized and bboxes.max() <= 1.0:  # Normalized
             bboxes_pixel = bboxes.copy()
             bboxes_pixel[:, [0, 2]] *= w
             bboxes_pixel[:, [1, 3]] *= h

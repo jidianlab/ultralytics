@@ -232,8 +232,8 @@ class RewardFunction:
         if not matched_ious:
             return torch.tensor(0.0, device=device)
 
-        # Compute weighted average IoU
-        total_weight = sum(self.class_weights.get(c, 1.0) for c in range(n_gt))
+        # Compute weighted average IoU using actual target class IDs
+        total_weight = sum(self.class_weights.get(int(target_cls[i].item()), 1.0) for i in range(n_gt))
         if total_weight == 0:
             total_weight = n_gt
 
@@ -297,14 +297,23 @@ class RewardFunction:
         # Compute IoU matrix using our custom function
         iou_matrix = compute_iou_matrix(pred_boxes, target_boxes)
 
-        # Count matches considering both IoU and class
-        matches = 0
+        # Count matches considering both IoU and class (greedy matching)
+        matched_preds = set()
+        matched_gts = set()
+
         for pred_idx in range(n_pred):
+            if pred_idx in matched_preds:
+                continue
             for gt_idx in range(n_gt):
+                if gt_idx in matched_gts:
+                    continue
                 if iou_matrix[pred_idx, gt_idx] >= self.iou_threshold:
                     if int(pred_cls[pred_idx].item()) == int(target_cls[gt_idx].item()):
-                        matches += 1
+                        matched_preds.add(pred_idx)
+                        matched_gts.add(gt_idx)
                         break
+
+        matches = len(matched_gts)
 
         # Miss rate and false alarm rate
         miss_rate = (n_gt - matches) / n_gt
