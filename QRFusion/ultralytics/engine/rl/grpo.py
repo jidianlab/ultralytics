@@ -474,13 +474,11 @@ class GRPOTrainer:
                 # Use first output (typically class logits)
                 logits = output[0] if len(output) > 0 else None
                 if logits is not None and torch.is_tensor(logits):
-                    probs = F.softmax(logits, dim=-1)
                     log_prob = F.log_softmax(logits, dim=-1).max(-1).values.mean()
                 else:
                     log_prob = torch.tensor(0.0, device=self.device)
             elif torch.is_tensor(output):
                 if output.dim() > 1:
-                    probs = F.softmax(output, dim=-1)
                     log_prob = F.log_softmax(output, dim=-1).max(-1).values.mean()
                 else:
                     log_prob = output.mean()

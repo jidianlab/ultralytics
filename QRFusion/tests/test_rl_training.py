@@ -9,13 +9,18 @@ These tests verify the core RL components including:
 - RL trainer integration
 """
 
+import os
+import sys
+
 import pytest
 import torch
 import torch.nn as nn
 
-# Import from QRFusion
-import sys
-sys.path.insert(0, '/home/runner/work/ultralytics/ultralytics')
+# Add QRFusion to path for imports
+# This handles both local development and CI environments
+_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _root_dir not in sys.path:
+    sys.path.insert(0, _root_dir)
 
 from QRFusion.ultralytics.engine.rl.config import GRPOConfig, RLConfig
 from QRFusion.ultralytics.engine.rl.rewards import (

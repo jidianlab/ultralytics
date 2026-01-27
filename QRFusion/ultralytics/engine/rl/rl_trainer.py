@@ -321,22 +321,58 @@ class BaseRLTrainer:
             warnings.warn(f"Could not load RL checkpoint from {path}")
 
 
-# Import base trainers lazily to avoid circular imports
-def _get_base_trainers():
-    """Lazily import base trainers to avoid circular imports."""
-    from ultralytics.models.yolo.classify.train import ClassificationTrainer
-    from ultralytics.models.yolo.detect.train import DetectionTrainer
-    from ultralytics.models.yolo.obb.train import OBBTrainer
-    from ultralytics.models.yolo.pose.train import PoseTrainer
-    from ultralytics.models.yolo.segment.train import SegmentationTrainer
+# Factory function to create RL-enhanced trainers
+def create_rl_trainer_class(base_trainer_class, default_rl_config, task_name):
+    """Factory to create RL-enhanced trainer classes.
 
-    return {
-        "detection": DetectionTrainer,
-        "segmentation": SegmentationTrainer,
-        "classification": ClassificationTrainer,
-        "pose": PoseTrainer,
-        "obb": OBBTrainer,
-    }
+    This factory creates a new trainer class that combines the BaseRLTrainer mixin
+    with a specific base trainer class using proper multiple inheritance.
+
+    Args:
+        base_trainer_class: The base trainer class to extend.
+        default_rl_config: Default RL configuration for this task.
+        task_name: Name of the task for logging.
+
+    Returns:
+        A new trainer class with RL capabilities.
+    """
+
+    class RLTrainer(BaseRLTrainer, base_trainer_class):
+        """RL-enhanced trainer created by factory."""
+
+        _default_rl_config = default_rl_config
+        _task_name = task_name
+
+        def __init__(self, cfg=None, overrides=None, _callbacks=None, rl_config=None):
+            """Initialize the RL trainer.
+
+            Args:
+                cfg: Configuration file path or dict.
+                overrides: Configuration overrides.
+                _callbacks: Callback functions.
+                rl_config: RL configuration (uses default if None).
+            """
+            # Store RL config before any initialization
+            self.rl_config = rl_config
+            self.grpo = None
+            self.grpo_trainer = None
+            self.reward_fn = None
+            self.rl_enabled = False
+            self.rl_metrics = {}
+            self._rl_update_counter = 0
+
+            # Initialize base trainer
+            base_trainer_class.__init__(self, cfg, overrides, _callbacks)
+
+        def _setup_train(self):
+            """Extended setup including RL initialization."""
+            # Call parent setup
+            base_trainer_class._setup_train(self)
+
+            # Setup RL components
+            self.setup_rl(default_config=self._default_rl_config)
+
+    return RLTrainer
 
 
 class RLDetectionTrainer(BaseRLTrainer):
@@ -366,34 +402,29 @@ class RLDetectionTrainer(BaseRLTrainer):
             _callbacks: Callback functions.
             rl_config (RLConfig | None): RL configuration.
         """
-        # Store RL config before parent init
+        # Store RL config and initialize RL attributes
         self.rl_config = rl_config
+        self.grpo = None
+        self.grpo_trainer = None
+        self.reward_fn = None
+        self.rl_enabled = False
+        self.rl_metrics = {}
+        self._rl_update_counter = 0
 
-        # Import base trainer
+        # Import and store base trainer class
         from ultralytics.models.yolo.detect.train import DetectionTrainer
-
-        # Use composition pattern for cleaner integration
         self._base_trainer_class = DetectionTrainer
 
-        # Initialize base trainer
-        super(DetectionTrainer, self).__init__(cfg, overrides, _callbacks)
+        # Initialize using the base trainer's __init__
+        DetectionTrainer.__init__(self, cfg, overrides, _callbacks)
 
     def _setup_train(self):
         """Extended setup including RL initialization."""
         # Call parent setup
-        super()._setup_train()
+        self._base_trainer_class._setup_train(self)
 
         # Setup RL components
         self.setup_rl(default_config=DETECTION_RL_CONFIG)
-
-    def train_epoch(self, *args, **kwargs):
-        """Training epoch with RL enhancements."""
-        result = super().train_epoch(*args, **kwargs)
-
-        # Log RL metrics at end of epoch
-        self.log_rl_metrics()
-
-        return result
 
 
 class RLSegmentationTrainer(BaseRLTrainer):
@@ -424,16 +455,22 @@ class RLSegmentationTrainer(BaseRLTrainer):
             _callbacks: Callback functions.
             rl_config (RLConfig | None): RL configuration.
         """
+        # Store RL config and initialize RL attributes
         self.rl_config = rl_config
+        self.grpo = None
+        self.grpo_trainer = None
+        self.reward_fn = None
+        self.rl_enabled = False
+        self.rl_metrics = {}
+        self._rl_update_counter = 0
 
         from ultralytics.models.yolo.segment.train import SegmentationTrainer
-
         self._base_trainer_class = SegmentationTrainer
-        super(SegmentationTrainer, self).__init__(cfg, overrides, _callbacks)
+        SegmentationTrainer.__init__(self, cfg, overrides, _callbacks)
 
     def _setup_train(self):
         """Extended setup including RL initialization."""
-        super()._setup_train()
+        self._base_trainer_class._setup_train(self)
         self.setup_rl(default_config=SEGMENTATION_RL_CONFIG)
 
     def _create_reward_function(self) -> RewardFunction:
@@ -483,16 +520,22 @@ class RLClassificationTrainer(BaseRLTrainer):
             _callbacks: Callback functions.
             rl_config (RLConfig | None): RL configuration.
         """
+        # Store RL config and initialize RL attributes
         self.rl_config = rl_config
+        self.grpo = None
+        self.grpo_trainer = None
+        self.reward_fn = None
+        self.rl_enabled = False
+        self.rl_metrics = {}
+        self._rl_update_counter = 0
 
         from ultralytics.models.yolo.classify.train import ClassificationTrainer
-
         self._base_trainer_class = ClassificationTrainer
-        super(ClassificationTrainer, self).__init__(cfg, overrides, _callbacks)
+        ClassificationTrainer.__init__(self, cfg, overrides, _callbacks)
 
     def _setup_train(self):
         """Extended setup including RL initialization."""
-        super()._setup_train()
+        self._base_trainer_class._setup_train(self)
         self.setup_rl(default_config=CLASSIFICATION_RL_CONFIG)
 
     def _create_reward_function(self) -> RewardFunction:
@@ -531,16 +574,22 @@ class RLPoseTrainer(BaseRLTrainer):
             _callbacks: Callback functions.
             rl_config (RLConfig | None): RL configuration.
         """
+        # Store RL config and initialize RL attributes
         self.rl_config = rl_config
+        self.grpo = None
+        self.grpo_trainer = None
+        self.reward_fn = None
+        self.rl_enabled = False
+        self.rl_metrics = {}
+        self._rl_update_counter = 0
 
         from ultralytics.models.yolo.pose.train import PoseTrainer
-
         self._base_trainer_class = PoseTrainer
-        super(PoseTrainer, self).__init__(cfg, overrides, _callbacks)
+        PoseTrainer.__init__(self, cfg, overrides, _callbacks)
 
     def _setup_train(self):
         """Extended setup including RL initialization."""
-        super()._setup_train()
+        self._base_trainer_class._setup_train(self)
         self.setup_rl(default_config=POSE_RL_CONFIG)
 
     def _create_reward_function(self) -> RewardFunction:
@@ -586,16 +635,22 @@ class RLOBBTrainer(BaseRLTrainer):
             _callbacks: Callback functions.
             rl_config (RLConfig | None): RL configuration.
         """
+        # Store RL config and initialize RL attributes
         self.rl_config = rl_config
+        self.grpo = None
+        self.grpo_trainer = None
+        self.reward_fn = None
+        self.rl_enabled = False
+        self.rl_metrics = {}
+        self._rl_update_counter = 0
 
         from ultralytics.models.yolo.obb.train import OBBTrainer
-
         self._base_trainer_class = OBBTrainer
-        super(OBBTrainer, self).__init__(cfg, overrides, _callbacks)
+        OBBTrainer.__init__(self, cfg, overrides, _callbacks)
 
     def _setup_train(self):
         """Extended setup including RL initialization."""
-        super()._setup_train()
+        self._base_trainer_class._setup_train(self)
         self.setup_rl(default_config=OBB_RL_CONFIG)
 
     def _create_reward_function(self) -> RewardFunction:
@@ -684,11 +739,12 @@ class AngleAccuracyReward(RewardFunction):
             gt_angles = targets
 
         if pred_angles is None or gt_angles is None:
-            return torch.zeros(1)
+            device = pred_angles.device if torch.is_tensor(pred_angles) else "cpu"
+            return torch.zeros(1, device=device)
 
         # Compute angular difference (handle periodicity)
         angle_diff = torch.abs(pred_angles - gt_angles)
-        angle_diff = torch.min(angle_diff, 2 * 3.14159 - angle_diff)  # Handle wrap-around
+        angle_diff = torch.min(angle_diff, 2 * math.pi - angle_diff)  # Handle wrap-around
 
         # Compute reward (exponential decay from threshold)
         reward = torch.exp(-angle_diff / self.angle_threshold)
