@@ -159,12 +159,7 @@ CFG_FLOAT_KEYS = frozenset(
         "time",
         "workspace",
         "batch",
-        # RL training parameters
-        "rl_weight",
-        "iou_weight",
-        "cls_weight",
-        "completeness_weight",
-        "iou_threshold",
+        # RL training parameters (non-fraction floats)
         "grpo_epsilon",
         "grpo_beta",
         "area_power",
@@ -196,6 +191,12 @@ CFG_FRACTION_KEYS = frozenset(
         "iou",
         "fraction",
         "multi_scale",
+        # RL training parameters (fraction floats 0.0-1.0)
+        "rl_weight",
+        "iou_weight",
+        "cls_weight",
+        "completeness_weight",
+        "iou_threshold",
     }
 )
 CFG_INT_KEYS = frozenset(

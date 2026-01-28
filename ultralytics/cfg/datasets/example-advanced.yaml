@@ -21,6 +21,10 @@ names:
 # Label Aliasing - Merge multiple labels into unified classes
 # This allows combining labels from different datasets or annotation conventions
 # Each target class name maps to a list of source label names
+# Note: When label_aliases are used, the 'names' section above is the original
+# dataset structure. The aliasing transforms car/truck/bus/motorcycle/bicycle
+# into a unified 'vehicle' class during training. The model will output
+# the unified class names defined in label_aliases.
 label_aliases:
   person:
     - human
@@ -63,5 +67,5 @@ class_augmentations:
 # Note on region_expand:
 # - Values < 1.0 are treated as ratios (e.g., 0.1 = 10% of bbox size)
 # - Values >= 1.0 are treated as pixel values
-# - Expansion stops at image boundaries and other object boundaries
+# - Expansion stops at image edges and other object boundaries
 # - When regions overlap, the augmentation with the smallest coefficient is used

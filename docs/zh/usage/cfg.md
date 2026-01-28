@@ -62,7 +62,7 @@ Ultralytics YOLO 支持强化学习（RL）训练模式，该模式将传统的�
 | `grpo_epsilon`          | `float` | `0.2`   | GRPO 的 PPO 风格裁剪参数。控制最大策略更新步长以确保训练稳定性。                                      |
 | `grpo_beta`             | `float` | `0.01`  | GRPO 的 KL 散度系数。惩罚与参考策略的较大偏离。                                                       |
 | `use_area_weighting`    | `bool`  | `False` | 启用面积加权奖励，较大的目标在奖励计算中获得更高的权重。                                              |
-| `area_power`            | `float` | `0.5`   | 面积加权计算的幂次。较高的值增加大小目标之间的权重差异。                                              |
+| `area_power`            | `float` | `0.5`   | 面积加权计算的幂次。较高的值增加不同大小目标之间的权重差异。                                          |
 | `class_weights`         | `dict`  | `None`  | 每个类别的奖励权重字典（例如 `{0: 2.0, 1: 1.0}`）。允许在 RL 训练中强调某些类别。                      |
 
 !!! example "强化学习训练示例"
