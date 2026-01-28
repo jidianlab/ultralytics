@@ -154,6 +154,78 @@ Adjust these settings to meet dataset and task requirements. Experimenting with 
 
 [Augmentation Guide](../guides/yolo-data-augmentation.md){ .md-button }
 
+## Reinforcement Learning Settings
+
+Ultralytics YOLO supports reinforcement learning (RL) training mode, which combines traditional supervised learning with reward-based optimization inspired by the GRPO (Group Relative Policy Optimization) algorithm. This can improve model performance by incorporating IoU and class-aware reward signals.
+
+{% include "macros/rl-training-args.md" %}
+
+!!! example "RL Training Example"
+
+    === "Python"
+
+        ```python
+        from ultralytics import YOLO
+
+        # Load a model
+        model = YOLO("yolo26n.pt")
+
+        # Train with RL enabled
+        results = model.train(
+            data="coco8.yaml",
+            epochs=100,
+            rl_enabled=True,
+            rl_weight=0.5,
+            iou_weight=0.7,
+            completeness_weight=0.3
+        )
+        ```
+
+    === "CLI"
+
+        ```bash
+        yolo detect train data=coco8.yaml model=yolo26n.pt epochs=100 rl_enabled=True rl_weight=0.5
+        ```
+
+## Label Aliasing and Per-Class Augmentation
+
+Advanced data configuration options allow you to merge multiple dataset labels into unified classes and apply different augmentation parameters to specific object classes.
+
+{% include "macros/advanced-data-args.md" %}
+
+!!! example "Label Aliasing Example"
+
+    Configure in your `data.yaml`:
+    ```yaml
+    # Merge multiple labels into unified classes
+    label_aliases:
+      person:
+        - human
+        - pedestrian
+        - people
+      vehicle:
+        - car
+        - truck
+        - bus
+    ```
+
+!!! example "Per-Class Augmentation Example"
+
+    Configure in your `data.yaml`:
+    ```yaml
+    # Apply different augmentation to different classes
+    class_augmentations:
+      person:
+        hsv_h: 0.02
+        hsv_s: 0.8
+        hsv_v: 0.5
+        region_expand: 0.1  # 10% expansion (ratio-based)
+      vehicle:
+        hsv_h: 0.01
+        hsv_s: 0.5
+        region_expand: 10   # 10 pixels expansion
+    ```
+
 ## Logging, Checkpoints and Plotting Settings
 
 Logging, checkpoints, plotting, and file management are important when training a YOLO model:

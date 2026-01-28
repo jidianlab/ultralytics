@@ -1,0 +1,67 @@
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
+# Example dataset configuration demonstrating label aliasing and per-class augmentation
+# Documentation: https://docs.ultralytics.com/datasets/
+# Example usage: yolo train data=example-advanced.yaml
+
+# Train/val/test sets
+path: coco8 # dataset root dir
+train: images/train
+val: images/val
+
+# Basic Classes (from original dataset)
+names:
+  0: person
+  1: bicycle
+  2: car
+  3: motorcycle
+  4: bus
+  5: truck
+
+# Label Aliasing - Merge multiple labels into unified classes
+# This allows combining labels from different datasets or annotation conventions
+# Each target class name maps to a list of source label names
+label_aliases:
+  person:
+    - human
+    - pedestrian
+    - people
+    - man
+    - woman
+    - child
+  vehicle:
+    - car
+    - truck
+    - bus
+    - motorcycle
+    - bicycle
+  # Classes without aliases keep their original names
+
+# Per-Class Data Augmentation - Different augmentation parameters for each class
+# Only the pixel regions of objects belonging to each class are augmented
+# Classes not listed here use default augmentation settings from config
+class_augmentations:
+  person:
+    hsv_h: 0.02  # HSV hue augmentation
+    hsv_s: 0.8   # HSV saturation augmentation
+    hsv_v: 0.5   # HSV value (brightness) augmentation
+    brightness: 0.2   # Brightness adjustment
+    contrast: 0.2     # Contrast adjustment
+    blur: 0           # No blur
+    noise: 0          # No noise
+    region_expand: 0.1  # Expand augmentation region by 10% (ratio-based, < 1.0)
+  vehicle:
+    hsv_h: 0.01
+    hsv_s: 0.5
+    hsv_v: 0.3
+    brightness: 0.1
+    contrast: 0.1
+    blur: 3           # Apply slight blur
+    noise: 5          # Add slight noise
+    region_expand: 10  # Expand augmentation region by 10 pixels (pixel-based, >= 1.0)
+
+# Note on region_expand:
+# - Values < 1.0 are treated as ratios (e.g., 0.1 = 10% of bbox size)
+# - Values >= 1.0 are treated as pixel values
+# - Expansion stops at image boundaries and other object boundaries
+# - When regions overlap, the augmentation with the smallest coefficient is used

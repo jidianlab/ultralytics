@@ -1,0 +1,14 @@
+| Argument              | Type    | Default | Description                                                                                                                                                       |
+| --------------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rl_enabled`          | `bool`  | `False` | Enables reinforcement learning training mode. When enabled, combines supervised loss with RL reward-based loss for improved training.                             |
+| `rl_weight`           | `float` | `0.5`   | Weight for RL loss vs supervised loss (0.0-1.0). Higher values give more importance to RL-based learning.                                                         |
+| `iou_weight`          | `float` | `0.7`   | Weight for IoU-based reward component (0.0-1.0). Controls how much IoU matching influences the reward calculation.                                                |
+| `cls_weight`          | `float` | `0.0`   | Weight for classification-based reward component (0.0-1.0). Controls the importance of class prediction accuracy in rewards.                                      |
+| `completeness_weight` | `float` | `0.3`   | Weight for detection completeness reward (0.0-1.0). Penalizes missed detections and false positives.                                                              |
+| `iou_threshold`       | `float` | `0.5`   | IoU threshold for matching predictions to ground truth in reward computation. Higher values require stricter matching.                                            |
+| `grpo_iterations`     | `int`   | `1`     | Number of GRPO (Group Relative Policy Optimization) iterations per batch. More iterations can improve policy updates but increase computation.                    |
+| `grpo_epsilon`        | `float` | `0.2`   | PPO-style clipping parameter for GRPO. Controls the maximum policy update step size to ensure training stability.                                                 |
+| `grpo_beta`           | `float` | `0.01`  | KL divergence coefficient for GRPO. Penalizes large policy changes from the reference policy.                                                                     |
+| `use_area_weighting`  | `bool`  | `False` | Enables area-weighted rewards where larger objects receive higher weight in reward calculation. Useful for datasets with varied object sizes.                     |
+| `area_power`          | `float` | `0.5`   | Power for area weighting calculation. Higher values increase the weight difference between large and small objects.                                               |
+| `class_weights`       | `dict`  | `None`  | Per-class reward weights as a dictionary (e.g., `{0: 2.0, 1: 1.0}`). Allows emphasizing certain classes during RL training.                                       |

@@ -129,5 +129,35 @@ erasing: 0.4 # (float) random erasing probability for classification (0–0.9), 
 # Custom config.yaml ---------------------------------------------------------------------------------------------------
 cfg: # (str, optional) path to a config.yaml that overrides defaults
 
+# Reinforcement Learning settings --------------------------------------------------------------------------------------
+rl_enabled: False # (bool) enable reinforcement learning training mode
+rl_weight: 0.5 # (float) weight for RL loss vs supervised loss (0.0-1.0)
+iou_weight: 0.7 # (float) weight for IoU-based reward component (0.0-1.0)
+cls_weight: 0.0 # (float) weight for classification-based reward component (0.0-1.0)
+completeness_weight: 0.3 # (float) weight for detection completeness reward (0.0-1.0)
+iou_threshold: 0.5 # (float) IoU threshold for matching predictions to ground truth
+grpo_iterations: 1 # (int) number of GRPO optimization iterations per batch
+grpo_epsilon: 0.2 # (float) PPO-style clipping parameter for GRPO
+grpo_beta: 0.01 # (float) KL divergence coefficient for GRPO
+use_area_weighting: False # (bool) use area-weighted rewards (larger objects weighted more)
+area_power: 0.5 # (float) power for area weighting calculation
+
+# Label Aliasing settings ----------------------------------------------------------------------------------------------
+label_aliases: # (dict, optional) mapping of target class names to list of source label names
+  # Example:
+  # person: [human, pedestrian, people]
+  # vehicle: [car, truck, bus]
+
+# Per-Class Augmentation settings --------------------------------------------------------------------------------------
+class_augmentations: # (dict, optional) per-class augmentation parameters
+  # Example:
+  # person:
+  #   hsv_h: 0.02
+  #   hsv_s: 0.8
+  #   region_expand: 0.1  # < 1.0 means ratio, >= 1.0 means pixels
+  # vehicle:
+  #   hsv_h: 0.01
+  #   region_expand: 10
+
 # Tracker settings ------------------------------------------------------------------------------------------------------
 tracker: botsort.yaml # (str) tracker config file: botsort.yaml or bytetrack.yaml

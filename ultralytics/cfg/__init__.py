@@ -159,6 +159,15 @@ CFG_FLOAT_KEYS = frozenset(
         "time",
         "workspace",
         "batch",
+        # RL training parameters
+        "rl_weight",
+        "iou_weight",
+        "cls_weight",
+        "completeness_weight",
+        "iou_threshold",
+        "grpo_epsilon",
+        "grpo_beta",
+        "area_power",
     }
 )
 CFG_FRACTION_KEYS = frozenset(
@@ -202,6 +211,8 @@ CFG_INT_KEYS = frozenset(
         "line_width",
         "nbs",
         "save_period",
+        # RL training parameters
+        "grpo_iterations",
     }
 )
 CFG_BOOL_KEYS = frozenset(
@@ -239,6 +250,9 @@ CFG_BOOL_KEYS = frozenset(
         "nms",
         "profile",
         "end2end",
+        # RL training parameters
+        "rl_enabled",
+        "use_area_weighting",
     }
 )
 
