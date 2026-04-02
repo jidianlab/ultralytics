@@ -277,6 +277,99 @@ These settings can be adjusted to meet the specific requirements of the dataset 
 
     For more information about training augmentation operations, see the [reference section](../reference/data/augment.md).
 
+## Reinforcement Learning Training
+
+Ultralytics YOLO supports reinforcement learning (RL) training mode, which combines traditional supervised learning with reward-based optimization. This approach is inspired by the GRPO (Group Relative Policy Optimization) algorithm and can improve model performance by incorporating IoU and class-aware reward signals.
+
+### RL Training Parameters
+
+{% include "macros/rl-training-args.md" %}
+
+!!! example "RL Training Example"
+
+    === "Python"
+
+        ```python
+        from ultralytics import YOLO
+
+        # Load a model
+        model = YOLO("yolo26n.pt")
+
+        # Train with RL enabled
+        results = model.train(
+            data="coco8.yaml",
+            epochs=100,
+            rl_enabled=True,
+            rl_weight=0.5,
+            iou_weight=0.7,
+            completeness_weight=0.3,
+            use_area_weighting=True  # Weight larger objects more
+        )
+        ```
+
+    === "CLI"
+
+        ```bash
+        yolo detect train data=coco8.yaml model=yolo26n.pt epochs=100 rl_enabled=True rl_weight=0.5
+        ```
+
+### When to Use RL Training
+
+RL training is particularly effective in the following scenarios:
+
+- **Imbalanced datasets**: Use `class_weights` to emphasize important classes.
+- **Size-aware detection**: Enable `use_area_weighting` to focus on larger objects.
+- **Detection completeness**: Adjust `completeness_weight` to penalize missed detections.
+- **Fine-tuning**: Combine RL loss with supervised loss for refined model tuning.
+
+## Advanced Data Configuration
+
+### Label Aliasing
+
+Label aliasing allows you to merge multiple dataset labels into unified classes, useful when combining datasets with different annotation conventions.
+
+Configure in your `data.yaml`:
+
+```yaml
+# Merge multiple labels into unified classes
+label_aliases:
+  person:
+    - human
+    - pedestrian
+    - people
+  vehicle:
+    - car
+    - truck
+    - bus
+```
+
+### Per-Class Augmentation
+
+Apply different augmentation parameters to specific object classes based on their pixel regions. Classes without custom configuration use the default augmentation settings.
+
+Configure in your `data.yaml`:
+
+```yaml
+# Apply different augmentation to different classes
+class_augmentations:
+  person:
+    hsv_h: 0.02
+    hsv_s: 0.8
+    hsv_v: 0.5
+    region_expand: 0.1  # 10% expansion (ratio-based, < 1.0)
+  vehicle:
+    hsv_h: 0.01
+    hsv_s: 0.5
+    region_expand: 10   # 10 pixels expansion (pixel-based, >= 1.0)
+```
+
+!!! note "Region Expansion"
+
+    - Values < 1.0 are treated as ratios (e.g., 0.1 = 10% of bbox size)
+    - Values >= 1.0 are treated as pixel values
+    - Expansion stops at image edges and other object boundaries
+    - When regions overlap, the augmentation with the smallest coefficient is used
+
 ## Logging
 
 In training a YOLO26 model, you might find it valuable to keep track of the model's performance over time. This is where logging comes into play. Ultralytics YOLO provides support for three types of loggers - [Comet](../integrations/comet.md), [ClearML](../integrations/clearml.md), and [TensorBoard](../integrations/tensorboard.md).

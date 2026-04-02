@@ -739,6 +739,11 @@ class Model(torch.nn.Module):
                 - lr0 (float): Initial learning rate.
                 - patience (int): Epochs to wait for no observable improvement for early stopping of training.
                 - augmentations (list[Callable]): List of augmentation functions to apply during training.
+                - rl_enabled (bool): Enable reinforcement learning training mode. Combines supervised
+                    loss with RL reward-based loss for improved training.
+                - rl_weight (float): Weight for RL loss vs supervised loss (0.0-1.0).
+                - iou_weight (float): Weight for IoU-based reward component (0.0-1.0).
+                - completeness_weight (float): Weight for detection completeness reward (0.0-1.0).
 
         Returns:
             (ultralytics.utils.metrics.DetMetrics | None): Training metrics if available and training is successful;
@@ -747,6 +752,8 @@ class Model(torch.nn.Module):
         Examples:
             >>> model = YOLO("yolo26n.pt")
             >>> results = model.train(data="coco8.yaml", epochs=3)
+            >>> # Train with RL enabled
+            >>> results = model.train(data="coco8.yaml", epochs=100, rl_enabled=True, rl_weight=0.5)
         """
         self._check_is_pytorch_model()
         if hasattr(self.session, "model") and self.session.model.id:  # Ultralytics HUB session with loaded model
@@ -768,6 +775,10 @@ class Model(torch.nn.Module):
         args = {**overrides, **custom, **kwargs, "mode": "train", "session": self.session}  # prioritizes rightmost args
         if args.get("resume"):
             args["resume"] = self.ckpt_path
+
+        # Check if RL training is enabled and select appropriate trainer
+        if trainer is None and args.get("rl_enabled", False):
+            trainer = self._get_rl_trainer()
 
         self.trainer = (trainer or self._smart_load("trainer"))(overrides=args, _callbacks=self.callbacks)
         if not args.get("resume"):  # manually set model only if not resuming
@@ -1056,6 +1067,53 @@ class Model(torch.nn.Module):
             name = self.__class__.__name__
             mode = inspect.stack()[1][3]  # get the function name.
             raise NotImplementedError(f"'{name}' model does not support '{mode}' mode for '{self.task}' task.") from e
+
+    def _get_rl_trainer(self):
+        """Get the appropriate RL trainer class based on the model task.
+
+        This is an internal method used by `train()` when `rl_enabled=True` is set.
+        It returns the correct RL trainer class (DetectionRLTrainer, SegmentationRLTrainer, etc.)
+        based on the current task of the model.
+
+        Note:
+            This is a private method. To enable RL training, use the `rl_enabled=True` parameter
+            in the `train()` method instead of calling this method directly.
+
+            Imports are performed inside the method to avoid circular dependencies and to
+            allow the rl_trainer module to be optional.
+
+        Returns:
+            (type): The RL trainer class appropriate for the current task.
+
+        Raises:
+            NotImplementedError: If RL training is not supported for the current task.
+        """
+        try:
+            from ultralytics.engine.rl_trainer import (
+                ClassificationRLTrainer,
+                DetectionRLTrainer,
+                OBBRLTrainer,
+                PoseRLTrainer,
+                SegmentationRLTrainer,
+            )
+        except ImportError as e:
+            raise ImportError(
+                "RL training requires the rl_trainer module. Please ensure ultralytics is properly installed."
+            ) from e
+
+        rl_trainer_map = {
+            "detect": DetectionRLTrainer,
+            "segment": SegmentationRLTrainer,
+            "pose": PoseRLTrainer,
+            "obb": OBBRLTrainer,
+            "classify": ClassificationRLTrainer,
+        }
+
+        if self.task not in rl_trainer_map:
+            raise NotImplementedError(f"RL training is not supported for '{self.task}' task.")
+
+        LOGGER.info(f"Using RL trainer for '{self.task}' task")
+        return rl_trainer_map[self.task]
 
     @property
     def task_map(self) -> dict:
